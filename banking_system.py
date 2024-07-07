@@ -1,5 +1,5 @@
 # from datetime import datetime
-from banking_class import Client, BankingAccount
+from banking_class import Client, BankingAccount, ContaCorrente, History, Transaction, Deposit, Saque
 
 # Goals 3 operations deposito, saque e extrato
 
@@ -39,7 +39,6 @@ extrato = ""
 numero_saques = 0
 saques = []
 depositos = []
-LIMITE_SAQUES = 3
 
 
 def cadastrar_cliente():
@@ -63,6 +62,7 @@ def cadastrar_cliente():
     elif (len(clients) == 0):
         client = Client(nome, data_nascimento, cpf, endereco)
         clients.append(client)
+        print("Cliente cadastrado com sucesso!")
         return
     
     else:
@@ -70,53 +70,70 @@ def cadastrar_cliente():
 
 def cadastrar_account():
     global numero_conta
-    print("-------------Faça o cadastro da sua conta")
+    print("-------------> Faça o cadastro da sua conta")
 
     cpf = str(input("Digite seu cpf: "))
 
-    if (len(clients) > 0):
-        for i in clients:
-            if (cpf == i.cpf):
-                account = BankingAccount("0001", numero_conta)
-                numero_conta += 1
-                i.accounts.append(account)
-                return
-            else:
-                print("CPF incorreto")
-    elif (len(clients) == 0):
-        print("Nenhum cliente cadastrado")
-        return
-    
+    client = next((client for client in clients if client.cpf == cpf), None)
+
+    # if (len(clients) > 0):
+        # for i in clients:
+            # if (cpf == i.cpf):
+    if client:
+        # account = BankingAccount("0001", numero_conta)
+        account = ContaCorrente("0001", numero_conta, client)
+        numero_conta += 1
+        client.add_account(account)
+                
     else:
-        print("Opção inválida!")
+        print("CPF incorreto")
+
+    # elif (len(clients) == 0):
+    #     print("Nenhum cliente cadastrado")
+    #     return
+    
+    # else:
+    #     print("Opção inválida!")
 
 
 def listar_client(cpf):
-    if (len(clients) == 0):
-        print("Nenhum cliente cadastrado!")
-        return
-    elif (len(clients) > 0):
-         for i in clients:
-             if (i.cpf == cpf):
-                print(i)
+    # if (len(clients) == 0):
+    #     print("Nenhum cliente cadastrado!")
+    #     return
+    # elif (len(clients) > 0):
+    #      for i in clients:
+    #          if (i.cpf == cpf):
+    #             print(i)
+    # else:
+    #     print("Opção inválida!")
+    client = next((client for client in clients if client.cpf == cpf), None)
+    if client:
+        print(client)
     else:
-        print("Opção inválida!")
+        print("CPF incorreto")
 
 def listar_accounts(cpf):
-    if (len(clients) == 0):
-        print("Nenhuma conta cadastrada!")
-        return
-    elif (len(clients) > 0):
-        for i in clients:
-            if (i.cpf == cpf):
-                 for j in i.accounts:
-                    print(j)
-                    return
+    # if (len(clients) == 0):
+    #     print("Nenhuma conta cadastrada!")
+    #     return
+    # elif (len(clients) > 0):
+    #     for i in clients:
+    #         if (i.cpf == cpf):
+    #              for j in i.accounts:
+    #                 print(j)
+    #                 return
              
-        print("Nenhuma conta cadastrada nesse CPF")
-        return
+    #     print("Nenhuma conta cadastrada nesse CPF")
+    #     return
+    client = next((client for client in clients if client.cpf == cpf), None)
 
-def client_menu():
+    if client:
+        for account in client.accounts:
+            print(account)
+    else:
+        print("Cliente não encontrado")
+
+def client_menu(client):
     menu_client = """
     -----------------------------ATM--------------------------
     1- Saque
@@ -126,48 +143,6 @@ def client_menu():
     4- Sair
     """
 
-    def saque(value):
-        # now = datetime.now()
-        global saldo
-        global numero_saques
-        global LIMITE_SAQUES
-
-        if (value > 0 and numero_saques < LIMITE_SAQUES and value <= saldo):
-            saldo -= value
-            saque_str = f"Saque - R$ {value:.2f}"
-            saques.append(saque_str)
-            numero_saques += 1
-            print(f"Saque de R$ {value:.2f} realizado com sucesso.")
-
-        elif (value == 0):
-            print("Por favor insira um valor maior do que 0")
-
-        elif (numero_saques > LIMITE_SAQUES):
-            print("Você atingiu o limite máximo de saques diários.")
-
-        elif (saldo < value):
-            print("Saldo insuficiente.")
-
-        else:
-            print("Valor incorreto, tente novamente.")
-
-    def depositar(value):
-        global saldo
-
-        if (value > 0):
-            
-            saldo += value
-            deposito_str = f"Deposito - R$ {value:.2f}"
-            depositos.append(deposito_str)
-            print(f"Deposito no valor de R$ {value:.2f} realizado com sucesso.")
-
-        elif (value == 0):
-            print("Por favor insira um valor maior do que 0")
-        
-        else:
-            print("Valor incorreto, tente novamente.")
-
-
     while(True):
 
         print(menu_client)
@@ -176,35 +151,65 @@ def client_menu():
 
         if option.lower() == "1":
             
-            value = float(input("Digite o valor do saque: "))
+            agency_number = int(input("Digite o número da agência: "))
 
-            saque(value)
+            for account in client.accounts:
+                if account.agencia == agency_number:
+                    value = float(input("Digite o valor do saque: "))
+
+                    client.make_transaction(account, Saque(value))
+                    
+                
+                else:
+                    print("Conta não encontrada")
+
             
         elif option.lower() == "2":
-            value = float(input("Digite o valor a ser depositado: "))
 
-            depositar(value)
-        elif option.lower() == "3":
+            agency_number = int(input("Digite o número da agência: "))
 
-            print("\n=================== EXTRATO =================")
+            for account in client.accounts:
+                if account.agencia == agency_number:
+                    value = float(input("Digite o valor do deposito: "))
 
-            if (saldo == 0 and len(saques) == 0 and len(depositos) == 0):
-                print("Não foram feitas movimentações")
-                print(f"\nSaldo - R$ {saldo:.2f} \n")
-            else:
-                for i in depositos:
-                    extrato += f"{i} \n"
+                    client.make_transaction(account, Deposit(value))
 
-                for j in saques:
-                    extrato += f"{j} \n"
+                else:
+                    print("Conta não encontrada")
                 
-                saldo_msg = f"\nSaldo - R$ {saldo:.2f} \n" 
-            
-                extrato += saldo_msg
 
-                print(extrato)
+            # client.make_transaction(client.accounts[0], Deposit(value))
+        elif option.lower() == "3":
+            agency_number = int(input("Digite o número da agência: "))
+
+            for account in client.accounts:
+                print(account.agencia)
+                if account.agencia == agency_number:
+
+                    # exibir_extrato(client, client.accounts[0].saldo)
+                    exibir_extrato(client, account.saldo)
+                    
+                else:
+                    print("Conta não encontrada")
+            # print("\n=================== EXTRATO =================")
+
+            # if (saldo == 0 and len(saques) == 0 and len(depositos) == 0):
+            #     print("Não foram feitas movimentações")
+            #     print(f"\nSaldo - R$ {saldo:.2f} \n")
+            # else:
+            #     for i in depositos:
+            #         extrato += f"{i} \n"
+
+            #     for j in saques:
+            #         extrato += f"{j} \n"
+                
+            #     saldo_msg = f"\nSaldo - R$ {saldo:.2f} \n" 
             
-            print("\n ===========================================")    
+            #     extrato += saldo_msg
+
+            #     print(extrato)
+            
+            # print("\n ===========================================")    
             
 
 
@@ -214,30 +219,37 @@ def client_menu():
         else:
             print("Opção inválida tente novamente")
 
+# def exibir_extrato(saldo, /, *, extrato):
+def exibir_extrato(client, saldo):
 
-     
-# conta = {'Saldo': 0, 'Saque': [], 'Deposito': []}
+    print("\n================ EXTRATO ================")
+    if len(client.accounts) == 0:
+        print("Não foram realizadas movimentações." if not extrato else extrato)
+    else:
+        for account in client.accounts:
+            print(account.historico.transactions)
 
-
+    print(f"\nSaldo:\t\tR$ {saldo:.2f}")
+    print("==========================================")
 
 def acessar_conta(cpf):
-    if (len(clients) == 0):
-        print("Nenhum cliente ou conta cadastrada!")
-        return
-    elif (len(clients) > 0): 
-        for i in clients:
-            if i.cpf == cpf:
-                client_menu()
-            elif i.cpf != cpf:
-                print("CPF inválido!")
-                return
-            else:
-                print("Opção inválida!")
+    client = next((client for client in clients if client.cpf == cpf), None)
+
+    # if (len(clients) == 0):
+    #     print("Nenhum cliente ou conta cadastrada!")
+    #     return
+    # elif (len(clients) > 0): 
+    #     for i in clients:
+    #         if i.cpf == cpf:
+    if client:
+        client_menu(client)
+    else:
+        print("Cliente não encontrado.")
 
 while True:
 
     menu_everyone = """
-    -----------------------------Banco Santos--------------------------
+    ----------------------------- Banco Santos --------------------------
     1- Cadastrar Cliente
     2- Criar Conta Corrente
     3- Listar Clientes
